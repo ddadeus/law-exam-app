@@ -47,7 +47,11 @@ async def grade_answer(problem: dict, answer_content: str) -> tuple[int, str]:
         async with httpx.AsyncClient(timeout=180.0) as client:
             response = await client.post(
                 url,
-                headers={"ngrok-skip-browser-warning": "true"},
+                headers={
+                    "Content-Type": "application/json",
+                    "ngrok-skip-browser-warning": "true",
+                    "User-Agent": "Mozilla/5.0",
+                },
                 json={
                     "model": settings.OLLAMA_MODEL,
                     "prompt": prompt,
