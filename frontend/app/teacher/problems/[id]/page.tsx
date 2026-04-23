@@ -30,6 +30,7 @@ export default function TeacherProblemDetail() {
   const [expandedAnswer, setExpandedAnswer] = useState<string | null>(null)
   const [confirmForms, setConfirmForms] = useState<Record<string, ConfirmForm>>({})
   const [confirming, setConfirming] = useState<string | null>(null)
+  const [regrading, setRegrading] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -72,6 +73,18 @@ export default function TeacherProblemDetail() {
           [answerId]: { score: answer.score ?? 0, feedback: answer.feedback ?? '' },
         }))
       }
+    }
+  }
+
+  async function handleRegrade(answerId: string) {
+    setRegrading(answerId)
+    try {
+      await api.answers.regrade(answerId)
+      await loadData()
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : '재채점 요청 중 오류가 발생했습니다')
+    } finally {
+      setRegrading(null)
     }
   }
 
@@ -266,10 +279,17 @@ export default function TeacherProblemDetail() {
                               </div>
                             ) : (
                               <div className="bg-green-50 rounded-xl border border-green-200 p-4">
-                                <div className="flex items-center gap-2 mb-2">
+                                <div className="flex items-center gap-2 mb-2 flex-wrap">
                                   <span className="text-green-600 font-semibold">✓ 강사 확인 완료</span>
                                   <span className="text-2xl font-bold text-green-700">{answer.score}점</span>
                                   <span className="text-sm text-gray-400">/ 100점</span>
+                                  <button
+                                    onClick={() => handleRegrade(answer.id)}
+                                    disabled={regrading === answer.id}
+                                    className="ml-auto text-sm text-gray-500 border border-gray-300 rounded px-3 py-1 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                                  >
+                                    {regrading === answer.id ? '처리 중...' : '↺ 다시 채점 요청'}
+                                  </button>
                                 </div>
                                 <p className="text-gray-700 text-sm whitespace-pre-wrap">{answer.feedback}</p>
                               </div>

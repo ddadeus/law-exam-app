@@ -183,10 +183,13 @@ async def confirm_answer(
 
 @router.post("/{answer_id}/regrade")
 async def regrade_answer(answer_id: str, current_user: dict = Depends(get_current_user)):
-    """답안 재채점 (AI 채점 재실행)"""
+    """답안 재채점 (AI 채점 재실행, 강사/관리자 전용)"""
+    if current_user["role"] not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="강사만 재채점을 요청할 수 있습니다")
+
     answer_result = (
         supabase.table("answers")
-        .select("*")
+        .select("*, problems(created_by)")
         .eq("id", answer_id)
         .execute()
     )
@@ -195,8 +198,8 @@ async def regrade_answer(answer_id: str, current_user: dict = Depends(get_curren
 
     answer = answer_result.data[0]
 
-    if current_user["role"] == "student" and answer["student_id"] != current_user["id"]:
-        raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+    if current_user["role"] == "teacher" and answer["problems"]["created_by"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="본인이 출제한 문제의 답안만 재채점할 수 있습니다")
 
     problem_result = (
         supabase.table("problems")
@@ -226,12 +229,7 @@ async def regrade_answer(answer_id: str, current_user: dict = Depends(get_curren
     if not updated.data:
         raise HTTPException(status_code=500, detail="채점 결과 저장 중 오류가 발생했습니다")
 
-    result = updated.data[0]
-    # 학생은 컨펌 전 마스킹
-    if current_user["role"] == "student":
-        result["score"] = None
-        result["feedback"] = None
-    return result
+    return updated.data[0]
 
 
 @router.get("/{answer_id}")
