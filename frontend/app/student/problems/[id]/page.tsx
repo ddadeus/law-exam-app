@@ -15,6 +15,7 @@ export default function StudentProblemPage() {
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [regrading, setRegrading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -43,6 +44,20 @@ export default function StudentProblemPage() {
       setError(err instanceof Error ? err.message : '오류가 발생했습니다')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleRegrade() {
+    if (!existingAnswer) return
+    setError('')
+    setRegrading(true)
+    try {
+      const updated = await api.answers.regrade(existingAnswer.id)
+      setExistingAnswer(updated)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '재채점 요청에 실패했습니다')
+    } finally {
+      setRegrading(false)
     }
   }
 
@@ -136,6 +151,21 @@ export default function StudentProblemPage() {
             {/* 답안 제출 또는 결과 표시 */}
             {existingAnswer ? (
               <div className="space-y-4">
+                {/* 재채점 에러 */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {/* 재채점 로딩 */}
+                {regrading && (
+                  <div className="bg-blue-50 border border-blue-200 text-blue-700 rounded-lg p-4 text-center">
+                    <p className="font-medium">AI 재채점 중입니다...</p>
+                    <p className="text-sm mt-1">잠시 기다려주세요 (최대 2~3분 소요).</p>
+                  </div>
+                )}
+
                 {/* 채점 결과 */}
                 {existingAnswer.score !== null && (
                   <div className="card border-l-4 border-green-400">
@@ -177,10 +207,17 @@ export default function StudentProblemPage() {
                   </div>
                 </div>
 
-                <div className="text-center">
+                <div className="flex gap-3 justify-center">
                   <Link href="/student" className="btn-secondary inline-block">
                     대시보드로 돌아가기
                   </Link>
+                  <button
+                    onClick={handleRegrade}
+                    disabled={regrading}
+                    className="btn-primary px-6"
+                  >
+                    {regrading ? '재채점 중...' : '다시 채점 요청'}
+                  </button>
                 </div>
               </div>
             ) : (

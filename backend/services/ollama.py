@@ -1,7 +1,10 @@
 import httpx
 import json
+import logging
 import re
 from config import settings
+
+logger = logging.getLogger(__name__)
 
 
 async def grade_answer(problem: dict, answer_content: str) -> tuple[int, str]:
@@ -37,21 +40,38 @@ async def grade_answer(problem: dict, answer_content: str) -> tuple[int, str]:
 
 {{"score": 85, "feedback": "여기에 상세한 첨삭 코멘트를 작성하세요. 잘된 점, 부족한 점, 개선 방향을 구체적으로 서술하세요."}}"""
 
-    async with httpx.AsyncClient(timeout=180.0) as client:
-        response = await client.post(
-            f"{settings.OLLAMA_BASE_URL}/api/generate",
-            headers={"ngrok-skip-browser-warning": "true"},
-            json={
-                "model": settings.OLLAMA_MODEL,
-                "prompt": prompt,
-                "stream": False,
-                "format": "json",
-            },
-        )
-        response.raise_for_status()
-        result = response.json()
+    url = f"{settings.OLLAMA_BASE_URL}/api/generate"
+    logger.info(f"Ollama 채점 요청: url={url}, model={settings.OLLAMA_MODEL}")
+
+    try:
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            response = await client.post(
+                url,
+                headers={"ngrok-skip-browser-warning": "true"},
+                json={
+                    "model": settings.OLLAMA_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json",
+                },
+            )
+            logger.info(f"Ollama 응답 상태: {response.status_code}")
+            if response.status_code != 200:
+                logger.error(f"Ollama 오류 응답 본문: {response.text[:500]}")
+            response.raise_for_status()
+            result = response.json()
+    except httpx.ConnectError as e:
+        logger.error(f"Ollama 연결 실패 (URL: {url}): {e}")
+        raise
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Ollama HTTP 오류 {e.response.status_code}: {e.response.text[:500]}")
+        raise
+    except httpx.TimeoutException as e:
+        logger.error(f"Ollama 타임아웃 (180초 초과): {e}")
+        raise
 
     response_text = result.get("response", "")
+    logger.info(f"Ollama 응답 텍스트 (앞 200자): {response_text[:200]}")
 
     try:
         data = json.loads(response_text)
@@ -59,8 +79,8 @@ async def grade_answer(problem: dict, answer_content: str) -> tuple[int, str]:
         score = max(0, min(100, score))
         feedback = data.get("feedback", "피드백을 생성할 수 없습니다.")
         return score, feedback
-    except (json.JSONDecodeError, KeyError, ValueError):
-        # JSON 파싱 실패 시 정규식으로 추출 시도
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        logger.warning(f"JSON 파싱 실패, 정규식으로 재시도: {e}")
         score_match = re.search(r'"score"\s*:\s*(\d+(?:\.\d+)?)', response_text)
         score = int(round(float(score_match.group(1)))) if score_match else 0
         score = max(0, min(100, score))

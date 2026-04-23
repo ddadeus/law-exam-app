@@ -1,8 +1,11 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends
 from models import AnswerCreate
 from auth import get_current_user
 from database import supabase
 from services.ollama import grade_answer
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/answers", tags=["답안"], redirect_slashes=False)
 
@@ -41,6 +44,7 @@ async def submit_answer(
             problem=problem, answer_content=answer.content
         )
     except Exception as e:
+        logger.error(f"AI 채점 실패 (problem_id={answer.problem_id}): {e}")
         score = None
         feedback = f"AI 채점 중 오류가 발생했습니다: {str(e)}"
 
@@ -90,6 +94,54 @@ async def get_answers_by_problem(
         .execute()
     )
     return result.data
+
+
+@router.post("/{answer_id}/regrade")
+async def regrade_answer(answer_id: str, current_user: dict = Depends(get_current_user)):
+    """답안 재채점 (AI 채점 재실행)"""
+    answer_result = (
+        supabase.table("answers")
+        .select("*")
+        .eq("id", answer_id)
+        .execute()
+    )
+    if not answer_result.data:
+        raise HTTPException(status_code=404, detail="답안을 찾을 수 없습니다")
+
+    answer = answer_result.data[0]
+
+    if current_user["role"] == "student" and answer["student_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+
+    problem_result = (
+        supabase.table("problems")
+        .select("*")
+        .eq("id", answer["problem_id"])
+        .execute()
+    )
+    if not problem_result.data:
+        raise HTTPException(status_code=404, detail="문제를 찾을 수 없습니다")
+
+    problem = problem_result.data[0]
+
+    try:
+        score, feedback = await grade_answer(
+            problem=problem, answer_content=answer["content"]
+        )
+    except Exception as e:
+        logger.error(f"재채점 실패 (answer_id={answer_id}): {e}")
+        raise HTTPException(status_code=500, detail=f"AI 채점 중 오류가 발생했습니다: {str(e)}")
+
+    updated = (
+        supabase.table("answers")
+        .update({"score": score, "feedback": feedback})
+        .eq("id", answer_id)
+        .execute()
+    )
+    if not updated.data:
+        raise HTTPException(status_code=500, detail="채점 결과 저장 중 오류가 발생했습니다")
+
+    return updated.data[0]
 
 
 @router.get("/{answer_id}")

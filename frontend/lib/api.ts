@@ -99,6 +99,8 @@ export const api = {
     getMy: () => request<Answer[]>('/answers/my'),
     getByProblem: (problem_id: string) => request<Answer[]>(`/answers/problem/${problem_id}`),
     get: (id: string) => request<Answer>(`/answers/${id}`),
+    regrade: (answer_id: string) =>
+      request<Answer>(`/answers/${answer_id}/regrade`, { method: 'POST' }),
   },
 }
 
