@@ -1,10 +1,40 @@
-import httpx
+import asyncio
 import json
 import logging
 import re
+import requests
 from config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _call_ollama(prompt: str) -> str:
+    """동기 requests로 Ollama /api/chat 호출. asyncio.to_thread에서 실행됨."""
+    url = f"{settings.OLLAMA_BASE_URL}/api/chat"
+    headers = {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+        "User-Agent": "Mozilla/5.0",
+    }
+    payload = {
+        "model": settings.OLLAMA_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+        "format": "json",
+    }
+
+    logger.info(f"Ollama 채점 요청: url={url}, model={settings.OLLAMA_MODEL}")
+    response = requests.post(url, headers=headers, json=payload, verify=False, timeout=120)
+    logger.info(f"Ollama 응답 상태: {response.status_code}")
+
+    if response.status_code != 200:
+        logger.error(f"Ollama 오류 응답 본문: {response.text[:500]}")
+    response.raise_for_status()
+
+    result = response.json()
+    response_text = result.get("message", {}).get("content", "")
+    logger.info(f"Ollama 응답 텍스트 (앞 200자): {response_text[:200]}")
+    return response_text
 
 
 async def grade_answer(problem: dict, answer_content: str) -> tuple[int, str]:
@@ -40,42 +70,17 @@ async def grade_answer(problem: dict, answer_content: str) -> tuple[int, str]:
 
 {{"score": 85, "feedback": "여기에 상세한 첨삭 코멘트를 작성하세요. 잘된 점, 부족한 점, 개선 방향을 구체적으로 서술하세요."}}"""
 
-    url = f"{settings.OLLAMA_BASE_URL}/api/generate"
-    logger.info(f"Ollama 채점 요청: url={url}, model={settings.OLLAMA_MODEL}")
-
     try:
-        async with httpx.AsyncClient(timeout=180.0) as client:
-            response = await client.post(
-                url,
-                headers={
-                    "Content-Type": "application/json",
-                    "ngrok-skip-browser-warning": "true",
-                    "User-Agent": "Mozilla/5.0",
-                },
-                json={
-                    "model": settings.OLLAMA_MODEL,
-                    "prompt": prompt,
-                    "stream": False,
-                    "format": "json",
-                },
-            )
-            logger.info(f"Ollama 응답 상태: {response.status_code}")
-            if response.status_code != 200:
-                logger.error(f"Ollama 오류 응답 본문: {response.text[:500]}")
-            response.raise_for_status()
-            result = response.json()
-    except httpx.ConnectError as e:
-        logger.error(f"Ollama 연결 실패 (URL: {url}): {e}")
+        response_text = await asyncio.to_thread(_call_ollama, prompt)
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"Ollama 연결 실패: {e}")
         raise
-    except httpx.HTTPStatusError as e:
+    except requests.exceptions.HTTPError as e:
         logger.error(f"Ollama HTTP 오류 {e.response.status_code}: {e.response.text[:500]}")
         raise
-    except httpx.TimeoutException as e:
-        logger.error(f"Ollama 타임아웃 (180초 초과): {e}")
+    except requests.exceptions.Timeout as e:
+        logger.error(f"Ollama 타임아웃 (120초 초과): {e}")
         raise
-
-    response_text = result.get("response", "")
-    logger.info(f"Ollama 응답 텍스트 (앞 200자): {response_text[:200]}")
 
     try:
         data = json.loads(response_text)
