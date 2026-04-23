@@ -77,14 +77,28 @@ async def get_assignments(current_user: dict = Depends(require_admin)):
     """강사-학생 매칭 목록"""
     result = (
         supabase.table("teacher_student")
-        .select(
-            "teacher_id, student_id, assigned_at, "
-            "teacher:users!teacher_id(name, email), "
-            "student:users!student_id(name, email)"
-        )
+        .select("teacher_id, student_id, assigned_at")
         .execute()
     )
-    return result.data
+    assignments = result.data
+    if not assignments:
+        return []
+
+    # 동일 테이블에 대한 다중 FK 조인은 PostgREST에서 불안정하므로 수동 조인
+    user_ids = list({a["teacher_id"] for a in assignments} | {a["student_id"] for a in assignments})
+    users_result = (
+        supabase.table("users")
+        .select("id, name, email")
+        .in_("id", user_ids)
+        .execute()
+    )
+    users_map = {u["id"]: {"name": u["name"], "email": u["email"]} for u in users_result.data}
+
+    for a in assignments:
+        a["teacher"] = users_map.get(a["teacher_id"], {})
+        a["student"] = users_map.get(a["student_id"], {})
+
+    return assignments
 
 
 @router.post("/assignments")
