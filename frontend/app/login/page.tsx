@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { api, saveAuth, getUser } from '@/lib/api'
+import { api, saveAuth, getUser, getDashboardPath } from '@/lib/api'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -14,7 +14,7 @@ export default function LoginPage() {
   useEffect(() => {
     const user = getUser()
     if (user) {
-      router.replace(user.role === 'teacher' ? '/teacher' : '/student')
+      router.replace(getDashboardPath(user.role))
     }
   }, [router])
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
     try {
       const data = await api.auth.login(email, password)
       saveAuth(data.access_token, data.user)
-      router.push(data.user.role === 'teacher' ? '/teacher' : '/student')
+      router.push(getDashboardPath(data.user.role))
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '로그인에 실패했습니다')
     } finally {
@@ -35,15 +35,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-navy-900 via-navy-800 to-navy-700">
+      <div className="w-full max-w-md px-4">
+        {/* 로고 */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-800">법률논술채점</h1>
-          <p className="text-gray-500 mt-2">AI 기반 법률 논술 시험 채점 플랫폼</p>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gold-500 rounded-full mb-4 shadow-lg">
+            <span className="text-3xl">⚖</span>
+          </div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">법률논술채점</h1>
+          <p className="text-navy-200 mt-2 text-sm">AI 기반 법률 논술 시험 채점 플랫폼</p>
         </div>
 
-        <div className="card">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">로그인</h2>
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <h2 className="text-xl font-bold text-navy-800 mb-6 text-center">로그인</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -70,16 +74,24 @@ export default function LoginPage() {
               />
             </div>
 
-            {error && <p className="error-text">{error}</p>}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
+                {error}
+              </div>
+            )}
 
-            <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
+            <button
+              type="submit"
+              className="btn-primary w-full py-3 text-base mt-2"
+              disabled={loading}
+            >
               {loading ? '로그인 중...' : '로그인'}
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-4">
+          <p className="text-center text-sm text-gray-500 mt-5">
             계정이 없으신가요?{' '}
-            <Link href="/register" className="text-blue-600 hover:underline font-medium">
+            <Link href="/register" className="text-navy-700 hover:text-navy-800 font-semibold underline">
               회원가입
             </Link>
           </p>

@@ -6,7 +6,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
-    role: str  # "teacher" or "student"
+    role: str  # "teacher" or "student" (admin은 DB 직접 생성)
 
 
 class UserLogin(BaseModel):
@@ -30,3 +30,13 @@ class ProblemCreate(BaseModel):
 class AnswerCreate(BaseModel):
     problem_id: str
     content: str
+
+
+class AnswerConfirm(BaseModel):
+    score: int
+    feedback: str
+
+
+class TeacherStudentAssign(BaseModel):
+    teacher_id: str
+    student_id: str

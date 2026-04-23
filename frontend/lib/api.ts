@@ -37,7 +37,9 @@ export interface User {
   id: string
   email: string
   name: string
-  role: 'teacher' | 'student'
+  role: 'teacher' | 'student' | 'admin'
+  is_active?: boolean
+  created_at?: string
 }
 
 export interface Problem {
@@ -58,8 +60,23 @@ export interface Answer {
   content: string
   score: number | null
   feedback: string | null
+  status: 'pending' | 'ai_graded' | 'teacher_confirmed'
   submitted_at: string
   problems?: { id: string; title: string; question: string }
+  student?: { name: string; email: string }
+}
+
+export interface AdminStats {
+  users: { total: number; teachers: number; students: number; admins: number; active: number }
+  problems: { total: number }
+  answers: { total: number; pending: number; ai_graded: number; confirmed: number; avg_score: number | null }
+}
+
+export interface Assignment {
+  teacher_id: string
+  student_id: string
+  assigned_at: string
+  teacher?: { name: string; email: string }
   student?: { name: string; email: string }
 }
 
@@ -101,6 +118,30 @@ export const api = {
     get: (id: string) => request<Answer>(`/answers/${id}`),
     regrade: (answer_id: string) =>
       request<Answer>(`/answers/${answer_id}/regrade`, { method: 'POST' }),
+    confirm: (answer_id: string, score: number, feedback: string) =>
+      request<Answer>(`/answers/${answer_id}/confirm`, {
+        method: 'PATCH',
+        body: JSON.stringify({ score, feedback }),
+      }),
+    getAiGraded: () => request<Answer[]>('/answers/ai-graded'),
+  },
+  admin: {
+    getUsers: () => request<User[]>('/admin/users'),
+    toggleActive: (user_id: string) =>
+      request<{ id: string; is_active: boolean }>(`/admin/users/${user_id}/toggle-active`, {
+        method: 'PATCH',
+      }),
+    getStats: () => request<AdminStats>('/admin/stats'),
+    getAssignments: () => request<Assignment[]>('/admin/assignments'),
+    createAssignment: (teacher_id: string, student_id: string) =>
+      request<Assignment>('/admin/assignments', {
+        method: 'POST',
+        body: JSON.stringify({ teacher_id, student_id }),
+      }),
+    deleteAssignment: (teacher_id: string, student_id: string) =>
+      request<{ message: string }>(`/admin/assignments/${teacher_id}/${student_id}`, {
+        method: 'DELETE',
+      }),
   },
 }
 
@@ -118,4 +159,10 @@ export function getUser(): User | null {
 export function logout() {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
+}
+
+export function getDashboardPath(role: string): string {
+  if (role === 'admin') return '/admin'
+  if (role === 'teacher') return '/teacher'
+  return '/student'
 }

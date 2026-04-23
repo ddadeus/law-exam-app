@@ -14,14 +14,8 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const user = getUser()
-    if (!user) {
-      router.replace('/login')
-      return
-    }
-    if (user.role !== 'student') {
-      router.replace('/teacher')
-      return
-    }
+    if (!user) { router.replace('/login'); return }
+    if (user.role !== 'student') { router.replace(user.role === 'admin' ? '/admin' : '/teacher'); return }
     loadData()
   }, [router])
 
@@ -45,31 +39,31 @@ export default function StudentDashboard() {
   }
 
   const submitted = myAnswers.length
+  const confirmed = myAnswers.filter((a) => a.status === 'teacher_confirmed').length
   const notSubmitted = problems.length - submitted
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">학생 대시보드</h1>
-          <p className="text-gray-500 text-sm mt-1">문제를 확인하고 답안을 제출하세요</p>
+          <h1 className="text-2xl font-bold text-navy-800">학생 대시보드</h1>
+          <p className="text-gray-500 text-sm mt-1">담당 강사의 문제를 확인하고 답안을 제출하세요</p>
         </div>
 
         {/* 통계 */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="card text-center">
-            <p className="text-3xl font-bold text-blue-600">{problems.length}</p>
-            <p className="text-sm text-gray-500 mt-1">전체 문제</p>
-          </div>
-          <div className="card text-center">
-            <p className="text-3xl font-bold text-green-600">{submitted}</p>
-            <p className="text-sm text-gray-500 mt-1">제출 완료</p>
-          </div>
-          <div className="card text-center">
-            <p className="text-3xl font-bold text-orange-500">{notSubmitted}</p>
-            <p className="text-sm text-gray-500 mt-1">미제출</p>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {[
+            { value: problems.length, label: '전체 문제', color: 'text-navy-700' },
+            { value: submitted, label: '제출 완료', color: 'text-blue-600' },
+            { value: confirmed, label: '결과 공개', color: 'text-green-600' },
+            { value: notSubmitted, label: '미제출', color: 'text-orange-500' },
+          ].map(({ value, label, color }) => (
+            <div key={label} className="card text-center py-4">
+              <p className={`text-2xl font-bold ${color}`}>{value}</p>
+              <p className="text-xs text-gray-500 mt-1">{label}</p>
+            </div>
+          ))}
         </div>
 
         {loading && (
@@ -85,34 +79,46 @@ export default function StudentDashboard() {
         {!loading && problems.length === 0 && (
           <div className="card text-center py-16">
             <p className="text-4xl mb-4">📋</p>
-            <p className="text-lg font-medium text-gray-700">아직 출제된 문제가 없습니다</p>
-            <p className="text-gray-400 text-sm mt-1">강사가 문제를 출제하면 여기에 표시됩니다</p>
+            <p className="text-lg font-medium text-gray-700">아직 배정된 문제가 없습니다</p>
+            <p className="text-gray-400 text-sm mt-1">
+              강사에게 배정되면 문제가 여기에 표시됩니다
+            </p>
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {problems.map((problem) => {
             const answer = getAnswerForProblem(problem.id)
+            const status = answer?.status
+
             return (
               <Link key={problem.id} href={`/student/problems/${problem.id}`}>
-                <div className="card hover:shadow-md transition-shadow cursor-pointer">
+                <div className="card hover:shadow-md transition-all cursor-pointer border-l-4 border-l-navy-200 hover:border-l-gold-500">
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h2 className="text-lg font-semibold text-gray-800 truncate">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h2 className="text-lg font-semibold text-navy-800 truncate">
                           {problem.title}
                         </h2>
-                        {answer ? (
-                          <span className="shrink-0 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">
-                            제출 완료
-                          </span>
-                        ) : (
+                        {!answer && (
                           <span className="shrink-0 bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full font-medium">
                             미제출
                           </span>
                         )}
+                        {status === 'pending' && (
+                          <span className="shrink-0 badge-pending">AI 채점 대기</span>
+                        )}
+                        {status === 'ai_graded' && (
+                          <span className="shrink-0 bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                            강사 검토 중
+                          </span>
+                        )}
+                        {status === 'teacher_confirmed' && (
+                          <span className="shrink-0 badge-confirmed">결과 공개</span>
+                        )}
                       </div>
-                      <p className="text-gray-500 text-sm">
+                      <p className="text-gray-400 text-xs">
+                        {problem.creator?.name && `강사: ${problem.creator.name} · `}
                         출제일: {new Date(problem.created_at).toLocaleDateString('ko-KR', {
                           year: 'numeric', month: 'long', day: 'numeric'
                         })}
@@ -121,20 +127,20 @@ export default function StudentDashboard() {
                     </div>
 
                     <div className="shrink-0 text-right">
-                      {answer && answer.score !== null ? (
+                      {status === 'teacher_confirmed' && answer?.score !== null ? (
                         <div>
                           <p className={`text-2xl font-bold ${
-                            answer.score >= 80 ? 'text-green-600' :
-                            answer.score >= 60 ? 'text-yellow-600' : 'text-red-600'
+                            (answer.score ?? 0) >= 80 ? 'text-green-600' :
+                            (answer.score ?? 0) >= 60 ? 'text-yellow-600' : 'text-red-600'
                           }`}>
                             {answer.score}점
                           </p>
                           <p className="text-xs text-gray-400">/ 100점</p>
                         </div>
                       ) : answer ? (
-                        <span className="text-sm text-gray-400">결과 확인</span>
+                        <span className="text-xs text-gray-400">결과 대기</span>
                       ) : (
-                        <span className="text-sm text-blue-600 font-medium">답안 작성 →</span>
+                        <span className="text-sm text-navy-600 font-medium">답안 작성 →</span>
                       )}
                     </div>
                   </div>
