@@ -127,11 +127,11 @@ export default function StudentDashboard() {
                     </div>
 
                     <div className="shrink-0 text-right">
-                      {status === 'teacher_confirmed' && answer?.score !== null ? (
+                      {answer && answer.status === 'teacher_confirmed' && answer.score !== null ? (
                         <div>
                           <p className={`text-2xl font-bold ${
-                            (answer.score ?? 0) >= 80 ? 'text-green-600' :
-                            (answer.score ?? 0) >= 60 ? 'text-yellow-600' : 'text-red-600'
+                            answer.score >= 80 ? 'text-green-600' :
+                            answer.score >= 60 ? 'text-yellow-600' : 'text-red-600'
                           }`}>
                             {answer.score}점
                           </p>
