@@ -78,7 +78,7 @@ async def get_assignments(current_user: dict = Depends(require_admin)):
     try:
         result = (
             supabase.table("teacher_student")
-            .select("teacher_id, student_id, assigned_at")
+            .select("teacher_id, student_id")
             .execute()
         )
     except Exception as e:

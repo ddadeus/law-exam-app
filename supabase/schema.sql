@@ -90,6 +90,9 @@ CREATE TABLE IF NOT EXISTS teacher_student (
   PRIMARY KEY (teacher_id, student_id)
 );
 
+-- 3-1) teacher_student: assigned_at 컬럼 추가 (이미 테이블이 있는 경우)
+ALTER TABLE teacher_student ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
 -- 4) 관리자 계정 직접 생성 (비밀번호는 백엔드에서 해싱 후 넣을 것)
 -- INSERT INTO users (email, password, role, name)
 -- VALUES ('admin@example.com', '<hashed_password>', 'admin', '관리자');
