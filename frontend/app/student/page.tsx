@@ -94,30 +94,13 @@ export default function StudentDashboard() {
             return (
               <Link key={problem.id} href={`/student/problems/${problem.id}`}>
                 <div className="card hover:shadow-md transition-all cursor-pointer border-l-4 border-l-navy-200 hover:border-l-gold-500">
-                  <div className="flex justify-between items-start gap-4">
+                  {/* 제목 영역 - 모바일: 세로, 데스크탑: 가로 */}
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h2 className="text-lg font-semibold text-navy-800 truncate">
-                          {problem.title}
-                        </h2>
-                        {!answer && (
-                          <span className="shrink-0 bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full font-medium">
-                            미제출
-                          </span>
-                        )}
-                        {status === 'pending' && (
-                          <span className="shrink-0 badge-pending">AI 채점 대기</span>
-                        )}
-                        {status === 'ai_graded' && (
-                          <span className="shrink-0 bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">
-                            강사 검토 중
-                          </span>
-                        )}
-                        {status === 'teacher_confirmed' && (
-                          <span className="shrink-0 badge-confirmed">결과 공개</span>
-                        )}
-                      </div>
-                      <p className="text-gray-400 text-xs">
+                      <h2 className="text-base sm:text-lg font-semibold text-navy-800 leading-snug">
+                        {problem.title}
+                      </h2>
+                      <p className="text-gray-400 text-xs mt-1">
                         {problem.creator?.name && `강사: ${problem.creator.name} · `}
                         출제일: {new Date(problem.created_at).toLocaleDateString('ko-KR', {
                           year: 'numeric', month: 'long', day: 'numeric'
@@ -126,7 +109,8 @@ export default function StudentDashboard() {
                       <p className="text-gray-600 text-sm mt-2 line-clamp-2">{problem.question}</p>
                     </div>
 
-                    <div className="shrink-0 text-right">
+                    {/* 데스크탑 점수 */}
+                    <div className="hidden sm:block shrink-0 text-right">
                       {answer && answer.status === 'teacher_confirmed' && answer.score !== null ? (
                         <div>
                           <p className={`text-2xl font-bold ${
@@ -142,6 +126,42 @@ export default function StudentDashboard() {
                       ) : (
                         <span className="text-sm text-navy-600 font-medium">답안 작성 →</span>
                       )}
+                    </div>
+                  </div>
+
+                  {/* 하단 상태 뱃지 + 점수 한 줄 */}
+                  <div className="flex items-center justify-between mt-3 gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {!answer && (
+                        <span className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full font-medium">
+                          미제출
+                        </span>
+                      )}
+                      {status === 'pending' && (
+                        <span className="badge-pending">AI 채점 대기</span>
+                      )}
+                      {status === 'ai_graded' && (
+                        <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                          강사 검토 중
+                        </span>
+                      )}
+                      {status === 'teacher_confirmed' && (
+                        <span className="badge-confirmed">결과 공개</span>
+                      )}
+                    </div>
+
+                    {/* 모바일 점수 */}
+                    <div className="sm:hidden shrink-0">
+                      {answer && answer.status === 'teacher_confirmed' && answer.score !== null ? (
+                        <span className={`text-lg font-bold ${
+                          answer.score >= 80 ? 'text-green-600' :
+                          answer.score >= 60 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {answer.score}점
+                        </span>
+                      ) : !answer ? (
+                        <span className="text-sm text-navy-600 font-medium">작성 →</span>
+                      ) : null}
                     </div>
                   </div>
                 </div>
