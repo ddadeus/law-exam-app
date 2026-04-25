@@ -1,3 +1,4 @@
+import json
 import logging
 from fastapi import APIRouter, HTTPException, Depends
 from models import AnswerCreate, AnswerConfirm
@@ -40,9 +41,10 @@ async def submit_answer(
     problem = problem_result.data[0]
 
     try:
-        score, feedback = await grade_answer(
+        score, feedback, highlights = await grade_answer(
             problem=problem, answer_content=answer.content
         )
+        feedback = feedback + "\n\n__HIGHLIGHTS__\n" + json.dumps(highlights, ensure_ascii=False)
         status = "ai_graded"
     except Exception as e:
         logger.error(f"AI 채점 실패 (problem_id={answer.problem_id}): {e}")
@@ -213,9 +215,10 @@ async def regrade_answer(answer_id: str, current_user: dict = Depends(get_curren
     problem = problem_result.data[0]
 
     try:
-        score, feedback = await grade_answer(
+        score, feedback, highlights = await grade_answer(
             problem=problem, answer_content=answer["content"]
         )
+        feedback = feedback + "\n\n__HIGHLIGHTS__\n" + json.dumps(highlights, ensure_ascii=False)
     except Exception as e:
         logger.error(f"재채점 실패 (answer_id={answer_id}): {e}")
         raise HTTPException(status_code=500, detail=f"AI 채점 중 오류가 발생했습니다: {str(e)}")

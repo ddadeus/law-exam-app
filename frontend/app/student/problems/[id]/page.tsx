@@ -106,6 +106,59 @@ function ScoreCircle({ score }: { score: number }) {
   )
 }
 
+interface Highlight { text: string; type: 'good' | 'bad' }
+
+function parseHighlights(feedback: string | null): { cleanFeedback: string; highlights: Highlight[] } {
+  if (!feedback) return { cleanFeedback: '', highlights: [] }
+  const marker = '\n\n__HIGHLIGHTS__\n'
+  const idx = feedback.indexOf(marker)
+  if (idx === -1) return { cleanFeedback: feedback, highlights: [] }
+  const cleanFeedback = feedback.slice(0, idx)
+  try {
+    const highlights = JSON.parse(feedback.slice(idx + marker.length)) as Highlight[]
+    return { cleanFeedback, highlights: Array.isArray(highlights) ? highlights : [] }
+  } catch {
+    return { cleanFeedback, highlights: [] }
+  }
+}
+
+function HighlightedAnswer({ content, highlights }: { content: string; highlights: Highlight[] }) {
+  if (!highlights.length) {
+    return (
+      <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{content}</p>
+    )
+  }
+
+  // 답안 텍스트를 highlights 기준으로 분절
+  type Segment = { text: string; type: 'good' | 'bad' | 'plain' }
+  const segments: Segment[] = []
+  let remaining = content
+
+  // 각 highlight를 찾아 세그먼트로 분리
+  const sorted = [...highlights].sort((a, b) => content.indexOf(a.text) - content.indexOf(b.text))
+
+  for (const hl of sorted) {
+    const pos = remaining.indexOf(hl.text)
+    if (pos === -1) continue
+    if (pos > 0) segments.push({ text: remaining.slice(0, pos), type: 'plain' })
+    segments.push({ text: hl.text, type: hl.type })
+    remaining = remaining.slice(pos + hl.text.length)
+  }
+  if (remaining) segments.push({ text: remaining, type: 'plain' })
+
+  return (
+    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+      {segments.map((seg, i) => {
+        if (seg.type === 'good')
+          return <mark key={i} className="bg-green-100 text-green-900 rounded px-0.5 not-italic">{seg.text}</mark>
+        if (seg.type === 'bad')
+          return <span key={i} className="bg-red-50 text-red-700 line-through rounded px-0.5">{seg.text}</span>
+        return <span key={i}>{seg.text}</span>
+      })}
+    </p>
+  )
+}
+
 export default function StudentProblemPage() {
   const router = useRouter()
   const params = useParams()
@@ -269,16 +322,19 @@ export default function StudentProblemPage() {
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                       <ScoreCircle score={existingAnswer.score} />
                       <div className="flex-1">
-                        {existingAnswer.feedback && (
-                          <>
-                            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2">
-                              강사 첨삭 코멘트
-                            </h3>
-                            <div className="bg-slate-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border">
-                              {existingAnswer.feedback}
-                            </div>
-                          </>
-                        )}
+                        {existingAnswer.feedback && (() => {
+                          const { cleanFeedback } = parseHighlights(existingAnswer.feedback)
+                          return (
+                            <>
+                              <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2">
+                                강사 첨삭 코멘트
+                              </h3>
+                              <div className="bg-slate-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border">
+                                {cleanFeedback}
+                              </div>
+                            </>
+                          )
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -290,8 +346,26 @@ export default function StudentProblemPage() {
                   <p className="text-xs text-gray-400 mb-3">
                     제출일시: {new Date(existingAnswer.submitted_at).toLocaleString('ko-KR')}
                   </p>
-                  <div className="bg-slate-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border">
-                    {existingAnswer.content}
+                  {isConfirmed && existingAnswer.feedback && (() => {
+                    const { highlights } = parseHighlights(existingAnswer.feedback)
+                    if (highlights.length > 0) {
+                      return (
+                        <p className="text-xs text-gray-400 mb-2">
+                          <mark className="bg-green-100 text-green-900 rounded px-0.5 not-italic">초록</mark>: 잘된 부분&nbsp;&nbsp;
+                          <span className="bg-red-50 text-red-700 line-through rounded px-0.5">빨간 취소선</span>: 보완 필요
+                        </p>
+                      )
+                    }
+                    return null
+                  })()}
+                  <div className="bg-slate-50 rounded-lg p-4 border">
+                    {isConfirmed && existingAnswer.feedback
+                      ? <HighlightedAnswer
+                          content={existingAnswer.content}
+                          highlights={parseHighlights(existingAnswer.feedback).highlights}
+                        />
+                      : <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{existingAnswer.content}</p>
+                    }
                   </div>
                 </div>
 
