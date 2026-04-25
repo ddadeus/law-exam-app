@@ -31,6 +31,7 @@ export default function TeacherProblemDetail() {
   const [confirmForms, setConfirmForms] = useState<Record<string, ConfirmForm>>({})
   const [confirming, setConfirming] = useState<string | null>(null)
   const [regrading, setRegrading] = useState<string | null>(null)
+  const [resetting, setResetting] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -73,6 +74,19 @@ export default function TeacherProblemDetail() {
           [answerId]: { score: answer.score ?? 0, feedback: answer.feedback ?? '' },
         }))
       }
+    }
+  }
+
+  async function handleReset(answerId: string) {
+    if (!confirm('정말 초기화하시겠습니까? 학생의 답안이 삭제되고 다시 제출할 수 있게 됩니다.')) return
+    setResetting(answerId)
+    try {
+      await api.answers.reset(answerId)
+      await loadData()
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : '초기화 중 오류가 발생했습니다')
+    } finally {
+      setResetting(null)
     }
   }
 
@@ -283,13 +297,22 @@ export default function TeacherProblemDetail() {
                                   <span className="text-green-600 font-semibold">✓ 강사 확인 완료</span>
                                   <span className="text-2xl font-bold text-green-700">{answer.score}점</span>
                                   <span className="text-sm text-gray-400">/ 100점</span>
-                                  <button
-                                    onClick={() => handleRegrade(answer.id)}
-                                    disabled={regrading === answer.id}
-                                    className="ml-auto text-sm text-gray-500 border border-gray-300 rounded px-3 py-1 hover:bg-gray-100 transition-colors disabled:opacity-50"
-                                  >
-                                    {regrading === answer.id ? '처리 중...' : '↺ 다시 채점 요청'}
-                                  </button>
+                                  <div className="ml-auto flex gap-2">
+                                    <button
+                                      onClick={() => handleRegrade(answer.id)}
+                                      disabled={regrading === answer.id || resetting === answer.id}
+                                      className="text-sm text-gray-500 border border-gray-300 rounded px-3 py-1 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                                    >
+                                      {regrading === answer.id ? '처리 중...' : '↺ 다시 채점 요청'}
+                                    </button>
+                                    <button
+                                      onClick={() => handleReset(answer.id)}
+                                      disabled={resetting === answer.id || regrading === answer.id}
+                                      className="text-sm text-red-500 border border-red-300 rounded px-3 py-1 hover:bg-red-50 transition-colors disabled:opacity-50"
+                                    >
+                                      {resetting === answer.id ? '처리 중...' : '답안 초기화'}
+                                    </button>
+                                  </div>
                                 </div>
                                 <p className="text-gray-700 text-sm whitespace-pre-wrap">{answer.feedback}</p>
                               </div>

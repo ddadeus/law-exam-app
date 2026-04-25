@@ -232,6 +232,30 @@ async def regrade_answer(answer_id: str, current_user: dict = Depends(get_curren
     return updated.data[0]
 
 
+@router.post("/{answer_id}/reset")
+async def reset_answer(answer_id: str, current_user: dict = Depends(get_current_user)):
+    """답안 초기화 - 해당 답안 행 삭제 (강사/관리자 전용)"""
+    if current_user["role"] not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="강사만 답안을 초기화할 수 있습니다")
+
+    answer_result = (
+        supabase.table("answers")
+        .select("*, problems(created_by)")
+        .eq("id", answer_id)
+        .execute()
+    )
+    if not answer_result.data:
+        raise HTTPException(status_code=404, detail="답안을 찾을 수 없습니다")
+
+    answer = answer_result.data[0]
+
+    if current_user["role"] == "teacher" and answer["problems"]["created_by"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="본인이 출제한 문제의 답안만 초기화할 수 있습니다")
+
+    supabase.table("answers").delete().eq("id", answer_id).execute()
+    return {"message": "답안이 초기화되었습니다"}
+
+
 @router.get("/{answer_id}")
 async def get_answer(answer_id: str, current_user: dict = Depends(get_current_user)):
     """답안 상세 조회"""

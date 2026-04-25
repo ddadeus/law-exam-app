@@ -118,6 +118,8 @@ export const api = {
     get: (id: string) => request<Answer>(`/answers/${id}`),
     regrade: (answer_id: string) =>
       request<Answer>(`/answers/${answer_id}/regrade`, { method: 'POST' }),
+    reset: (answer_id: string) =>
+      request<{ message: string }>(`/answers/${answer_id}/reset`, { method: 'POST' }),
     confirm: (answer_id: string, score: number, feedback: string) =>
       request<Answer>(`/answers/${answer_id}/confirm`, {
         method: 'PATCH',
