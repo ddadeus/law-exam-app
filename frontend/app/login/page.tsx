@@ -42,8 +42,8 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gold-500 rounded-full mb-4 shadow-lg">
             <span className="text-3xl">⚖</span>
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">법률논술채점</h1>
-          <p className="text-navy-200 mt-2 text-sm">AI 기반 법률 논술 시험 채점 플랫폼</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">로스타</h1>
+          <p className="text-navy-200 mt-2 text-sm">AI 기반 법률 논술 첨삭 플랫폼</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">

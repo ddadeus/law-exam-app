@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: '법률 논술 채점 시스템',
-  description: '대한민국 법률 논술 시험 AI 자동 채점 플랫폼',
+  title: '로스타 - AI 법률 논술 첨삭',
+  description: 'AI 기반 법률 논술 첨삭 플랫폼 로스타',
 }
 
 export default function RootLayout({

@@ -39,7 +39,7 @@ export default function Navbar() {
     <nav className="bg-navy-800 border-b border-navy-900 shadow-md">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <Link href={user ? getDashboardPath(user.role) : '/'} className="flex items-center gap-2">
-          <span className="text-gold-400 font-bold text-xl tracking-tight">⚖ 법률논술채점</span>
+          <span className="text-gold-400 font-bold text-xl tracking-tight">⚖ 로스타</span>
           <span className="text-xs bg-gold-500 text-navy-900 px-2 py-0.5 rounded-full font-semibold hidden sm:inline">
             AI 채점
           </span>
