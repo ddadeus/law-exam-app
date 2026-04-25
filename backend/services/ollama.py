@@ -31,11 +31,12 @@ def _call_ollama(prompt: str) -> str:
     url = f"{settings.OLLAMA_BASE_URL}/api/chat"
     headers = {
         "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "*/*",
+        "Accept-Language": "ko-KR,ko;q=0.9",
+        "Cache-Control": "no-cache",
         "ngrok-skip-browser-warning": "true",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "CF-Access-Client-Id": "",
-        "cf-access-token": "",
+        "cf-bypass": "1",
     }
     payload = {
         "model": settings.OLLAMA_MODEL,
@@ -44,7 +45,14 @@ def _call_ollama(prompt: str) -> str:
         "format": "json",
     }
     logger.info(f"Ollama 채점 요청: url={url}, model={settings.OLLAMA_MODEL}")
-    response = requests.post(url, headers=headers, json=payload, verify=False, timeout=180)
+    response = requests.post(
+        url,
+        headers=headers,
+        json=payload,
+        verify=False,
+        timeout=180,
+        allow_redirects=True
+    )
     logger.info(f"Ollama 응답 상태: {response.status_code}")
     if response.status_code != 200:
         logger.error(f"Ollama 오류: {response.text[:500]}")
