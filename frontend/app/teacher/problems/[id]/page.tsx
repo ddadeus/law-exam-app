@@ -283,17 +283,17 @@ export default function TeacherProblemDetail() {
                                     placeholder="첨삭 코멘트를 입력하세요 (AI 생성 내용을 수정하거나 그대로 사용할 수 있습니다)"
                                   />
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-3">
                                   <button
-                                    onClick={() => handleRegrade(answer.id)}
-                                    disabled={regrading === answer.id || confirming === answer.id}
-                                    className="text-sm text-gray-500 border border-gray-300 rounded px-3 py-1 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                                    onClick={() => api.answers.regrade(answer.id).then(() => loadData())}
+                                    disabled={confirming === answer.id}
+                                    className="text-sm text-gray-600 border border-gray-300 rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors"
                                   >
-                                    {regrading === answer.id ? '재채점 중...' : '↺ 다시 채점 요청'}
+                                    🔄 다시 채점 요청
                                   </button>
                                   <button
                                     onClick={() => handleConfirm(answer.id)}
-                                    disabled={confirming === answer.id || regrading === answer.id}
+                                    disabled={confirming === answer.id}
                                     className="btn-gold px-6"
                                   >
                                     {confirming === answer.id ? '처리 중...' : '✓ 강사 컨펌 (학생 공개)'}
