@@ -1,9 +1,77 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import { api, getUser, Problem, Answer } from '@/lib/api'
+
+const LINE_HEIGHT = 28
+
+function LinedTextarea({
+  value,
+  onChange,
+  disabled,
+  placeholder,
+}: {
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
+  disabled?: boolean
+  placeholder?: string
+}) {
+  const lineCount = Math.max(20, value.split('\n').length + 3)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  function syncScroll() {
+    if (textareaRef.current && scrollRef.current) {
+      scrollRef.current.scrollTop = textareaRef.current.scrollTop
+    }
+  }
+
+  return (
+    <div className="relative border border-gray-200 rounded-lg overflow-hidden font-mono text-sm bg-white">
+      {/* 줄 번호 + 구분선 배경 레이어 */}
+      <div
+        ref={scrollRef}
+        className="absolute inset-0 overflow-hidden pointer-events-none select-none"
+        aria-hidden
+      >
+        {Array.from({ length: lineCount }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center border-b border-gray-100"
+            style={{ height: LINE_HEIGHT }}
+          >
+            <span
+              className="text-right pr-3 text-gray-300 text-xs"
+              style={{ width: 40, minWidth: 40 }}
+            >
+              {i + 1}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* 실제 입력 textarea */}
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={onChange}
+        onScroll={syncScroll}
+        disabled={disabled}
+        placeholder={placeholder}
+        spellCheck={false}
+        className="relative w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-300 py-0 pr-4"
+        style={{
+          paddingLeft: 48,
+          lineHeight: `${LINE_HEIGHT}px`,
+          height: lineCount * LINE_HEIGHT,
+          caretColor: '#1e3a5f',
+        }}
+      />
+    </div>
+  )
+}
 
 function ScoreCircle({ score }: { score: number }) {
   const radius = 52
@@ -251,13 +319,11 @@ export default function StudentProblemPage() {
                 </p>
 
                 <form onSubmit={handleSubmit}>
-                  <textarea
-                    className="input-field resize-none mb-2"
-                    rows={12}
-                    placeholder="여기에 답안을 작성하세요. 관련 법리, 판례를 적용하여 논리적으로 서술하세요."
+                  <LinedTextarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     disabled={submitting}
+                    placeholder="여기에 답안을 작성하세요. 관련 법리, 판례를 적용하여 논리적으로 서술하세요."
                   />
                   <p className="text-xs text-gray-400 mb-4">{content.length}자 (최소 50자)</p>
 
